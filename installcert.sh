@@ -8,11 +8,13 @@
 #*************************************************************************************
 
 # 修改以下内容为自己的域名服务商信息，具体的DNS类型或环境变量名称请参见Neilpang/acme.sh
-export CX_Key=""
-export CX_Secret=""
+export CX_Key="ChangeToYourKey"
+export CX_Secret="ChangeToYourSecret"
 DNS="dns_cx"
 # 修改以下内容为自己所拥有的域名名称，LE已支持泛域名证书，只需填写域名名称即可
-DOMAIN=""
+DOMAIN="ChangeToYourDomain"
+# 修改以下内容为自己安装的acme.sh的路径，如采用默认安装路径则无须修改
+ACME_PATH="/usr/local/share/acme.sh"
 
 # 以下为处理脚本，不懂的请勿随意修改
 NAME="installcert.sh"
@@ -34,7 +36,9 @@ EXIT_SUCCESS=0
 EXIT_FAILURE=1
 EXIT_ICLR_NOORRECT=2
 EXIT_COMMAND_NOT_FOUND=127
-# 证书路径
+# acme.sh配置文件路径
+ACME_CONFIG_HOME="${ACME_PATH}/config"
+# 证书存储路径
 CERT_FOLDER="/usr/syno/etc/certificate/system/default"
 CERT_ARCHIVE="/usr/syno/etc/certificate/_archive/$(cat /usr/syno/etc/certificate/_archive/DEFAULT)"
 CERT_REVERSEPROXY="/usr/syno/etc/certificate/ReverseProxy"
@@ -43,42 +47,48 @@ CERT_REVERSEPROXY="/usr/syno/etc/certificate/ReverseProxy"
 if [ "$1" = "-c" -o "$1" = "--create" ];then
 	echo -e "${CLR_YL}开始创建${DOMAIN}证书${CLR_NO}"
 	action=1
-	./acme.sh --issue -d $DOMAIN -d *.$DOMAIN --dns $DNS \
+	$ACME_PATH/acme.sh --issue -d $DOMAIN -d *.$DOMAIN --dns $DNS \
 			--certpath $CERT_FOLDER/cert.pem \
 			--keypath $CERT_FOLDER/privkey.pem \
 			--fullchainpath $CERT_FOLDER/fullchain.pem \
 			--capath $CERT_FOLDER/chain.pem \
-			--dnssleep 20
+			--home $ACME_PATH \
+			--config-home $ACME_CONFIG_HOME \
+			--dnssleep 20 
 	result=$?
 elif [ "$1" = "-u" -o "$1" = "--update" ];then
-	echo -e "${CLR_YL}开始更新${DOMAIN}证书${CLR_NO}"
+	echo  -e "${CLR_YL}开始更新${DOMAIN}证书${CLR_NO}"
 	action=0
 	if [ "$2" = "--force" -o "$2" = "-f" ];then
-		./acme.sh --renew -d $DOMAIN -d *.$DOMAIN \
+		$ACME_PATH/ acme.sh --renew -d $DOMAIN -d *.$DOMAIN \
 			--certpath $CERT_FOLDER/cert.pem \
 			--keypath $CERT_FOLDER/privkey.pem \
 			--fullchainpath $CERT_FOLDER/fullchain.pem \
 			--capath $CERT_FOLDER/chain.pem \
+			--home $ACME_PATH \
+			--config-home $ACME_CONFIG_HOME \
 			--dnssleep 20 \
 			--force
 		result=$?
 	else	
-		./acme.sh --renew -d $DOMAIN -d *.$DOMAIN \
+		$ACME_PATH/acme.sh --renew -d $DOMAIN -d *.$DOMAIN \
 			--certpath $CERT_FOLDER/cert.pem \
 			--keypath $CERT_FOLDER/privkey.pem \
 			--fullchainpath $CERT_FOLDER/fullchain.pem \
 			--capath $CERT_FOLDER/chain.pem \
-			--dnssleep 20
+			--home $ACME_PATH \
+			--config-home $ACME_CONFIG_HOME \
+		 	--dnssleep 20 
 		result=$?
 	fi
 elif [ "$1" = "-h" -o "$1" = "--help" ];then
-	echo -e "${CLR_YL}${NAME} V${VER}\n${URL}${CLR_NO}"
+	echo  -e "${CLR_YL}${NAME} V${VER}\n${URL}${CLR_NO}"
 	echo -e $HELP
 	exit $EXIT_ICLR_NOORRECT
 else
 	echo -e "${CLR_RD}请在执行语句中输入命令${CLR_NO}"
 	echo -e $HELP
-	exit $EXIT_COMMAND_NOT_FOUND
+	exit $ EXIT_COMMAND_NOT_FOUND
 fi
 
 # 对获取证书的结果进行处理
@@ -98,7 +108,6 @@ fi
 wait
 echo -e "${CLR_YL}复制证书到存档目录:${CLR_NO}${CERT_ARCHIVE}"
 cp $CERT_FOLDER/*.pem $CERT_ARCHIVE
-
 # 处理反代
 wait
 echo -e "${CLR_YL}复制证书到反代目录:${CLR_NO}${CERT_REVERSEPROXY}"
